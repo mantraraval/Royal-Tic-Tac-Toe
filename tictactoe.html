@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic-Tac-Toe with AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background:
+                radial-gradient(1200px 600px at 20% -10%, rgba(255, 215, 128, 0.10), transparent 60%),
+                radial-gradient(1000px 500px at 120% 10%, rgba(255, 160, 64, 0.10), transparent 60%),
+                linear-gradient(180deg, #0b0f16 0%, #0a0e13 60%, #0b0f16 100%);
+            background-color: #0b0f16;
+        }
+        
+        .game-cell {
+            transition: all 0.3s ease;
+        }
+        
+        .game-cell:hover {
+            transform: scale(1.05);
+        }
+        
+        .winning-line {
+            position: absolute;
+            height: 3px;
+            background: linear-gradient(90deg, #f5d27a, #e7b74a);
+            border-radius: 2px;
+            z-index: 10;
+            transform-origin: 0 50%;
+            transition: transform 600ms ease-in-out;
+            will-change: transform;
+            box-shadow: 0 0 10px rgba(231, 183, 74, 0.25);
+        }
+        
+        .winning-line.horizontal {
+            width: 100%;
+        }
+        
+        .winning-line.vertical {
+            width: 4px;
+            height: 100%;
+        }
+        
+        .winning-line.diagonal-1 {
+            width: 141.42%;
+            transform: rotate(45deg);
+            transform-origin: center;
+        }
+        
+        .winning-line.diagonal-2 {
+            width: 141.42%;
+            transform: rotate(-45deg);
+            transform-origin: center;
+        }
+        
+        .modal {
+            backdrop-filter: blur(8px);
+        }
+        /* Premium glass buttons */
+        .btn-glass {
+            background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+            border: 1px solid rgba(255,255,255,0.12);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+            backdrop-filter: blur(8px);
+        }
+        .btn-glass:hover {
+            border-color: rgba(255,255,255,0.22);
+            box-shadow: 0 10px 28px rgba(0,0,0,0.45), 0 0 24px rgba(255,255,255,0.08) inset;
+        }
+        .btn-gold {
+            background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%);
+            color: #0b0f16;
+            border: 1px solid rgba(212, 175, 55, 0.65);
+            box-shadow: 0 10px 30px rgba(245, 158, 11, 0.35), 0 0 0 1px rgba(212,175,55,0.25) inset;
+        }
+        .btn-gold:hover { filter: brightness(1.06); }
+        
+        /* Royal surfaces */
+        .royal-panel {
+            background: linear-gradient(180deg, rgba(17,24,39,0.96), rgba(11,17,27,0.96));
+            border: 1px solid rgba(212,175,55,0.25);
+            box-shadow: 0 10px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04) inset;
+        }
+        .royal-board { background: linear-gradient(180deg, #0f172a 0%, #0b1320 100%); }
+        .royal-frame { border-radius: 20px; position: relative; border: 2px solid rgba(212, 175, 55, 0.35); box-shadow: 0 0 0 1px rgba(212, 175, 55, 0.15) inset, 0 10px 30px rgba(0,0,0,0.6), 0 0 40px rgba(212, 175, 55, 0.08); }
+        .royal-frame:before { content: ''; position: absolute; inset: 8px; border-radius: 14px; pointer-events: none; background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02)); box-shadow: 0 0 0 1px rgba(255,255,255,0.06) inset; }
+        .royal-cell { background: linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)); border: 1px solid rgba(212, 175, 55, 0.15); box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 -1px 0 rgba(0,0,0,0.35) inset, 0 8px 20px rgba(0,0,0,0.35); backdrop-filter: blur(2px); }
+        .royal-cell:hover { border-color: rgba(212, 175, 55, 0.35); box-shadow: 0 1px 0 rgba(255,255,255,0.10) inset, 0 -1px 0 rgba(0,0,0,0.45) inset, 0 10px 24px rgba(212, 175, 55, 0.12), 0 8px 20px rgba(0,0,0,0.45); }
+        .text-glow-gold { text-shadow: 0 0 8px rgba(245, 158, 11, 0.25); }
+        .text-glow-silver { text-shadow: 0 0 8px rgba(148,163,184,0.20); }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex items-center justify-center p-4">
+    <div class="max-w-4xl w-full">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold bg-gradient-to-r from-yellow-400 via-amber-300 to-yellow-500 bg-clip-text text-transparent mb-2 text-glow-gold">
+                Royal Tic‑Tac‑Toe
+            </h1>
+            <p class="text-slate-300 text-lg text-glow-silver">Play against AI or challenge a friend</p>
+        </div>
+
+        <!-- Game Mode Selection -->
+        <div class="text-center mb-6 royal-panel rounded-xl p-5">
+            <div class="mb-4">
+                <h3 class="text-lg font-semibold text-yellow-300 mb-3 text-glow-gold">Choose Game Mode</h3>
+                <div class="flex justify-center gap-4">
+                    <button id="aiModeBtn" class="btn-gold hover:brightness-110 px-6 py-2 rounded-lg font-semibold transition-all duration-200">
+                        🤖 vs AI
+                    </button>
+                    <button id="pvpModeBtn" class="btn-glass text-slate-100 px-6 py-2 rounded-lg font-medium transition-all duration-200">
+                        👥 Player vs Player
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Player Names Input (hidden by default) -->
+            <div id="playerNamesSection" class="hidden mb-4">
+                <div class="flex justify-center gap-4 mb-3">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Player 1 (X)</label>
+                        <input type="text" id="player1Name" placeholder="Player 1" class="bg-slate-800/70 text-white px-3 py-2 rounded-lg border border-yellow-700/40 focus:border-yellow-400 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-300 mb-1">Player 2 (O)</label>
+                        <input type="text" id="player2Name" placeholder="Player 2" class="bg-slate-800/70 text-white px-3 py-2 rounded-lg border border-yellow-700/40 focus:border-yellow-400 focus:outline-none">
+                    </div>
+                </div>
+                <button id="startPvPGameBtn" class="btn-gold hover:brightness-110 px-6 py-2 rounded-lg font-semibold transition-all duration-200">
+                    Start Game
+                </button>
+            </div>
+        </div>
+
+        <!-- Game Status -->
+        <div class="text-center mb-6">
+            <div id="gameStatus" class="text-xl font-semibold text-slate-200 mb-4 text-glow-silver">
+                Your turn (X)
+            </div>
+            <button id="newGameBtn" class="btn-glass text-slate-100 px-6 py-2 rounded-lg font-medium transition-all duration-200">
+                New Game
+            </button>
+        </div>
+
+        <!-- Game Board -->
+        <div class="flex justify-center mb-8">
+            <div class="relative royal-board royal-frame p-4 rounded-xl shadow-2xl">
+                <div id="gameBoard" class="grid grid-cols-3 gap-2 w-80 h-80 relative">
+                    <!-- Game cells will be generated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+
+    <!-- Game Result Modal -->
+    <div id="gameModal" class="fixed inset-0 bg-black/70 modal hidden items-center justify-center z-50">
+        <div class="royal-panel rounded-xl p-8 max-w-md w-full mx-4 fade-in">
+            <div class="text-center">
+                <div id="modalIcon" class="text-6xl mb-4">🎉</div>
+                <h2 id="modalTitle" class="text-2xl font-bold mb-2 text-yellow-300 text-glow-gold">Game Over!</h2>
+                <p id="modalMessage" class="text-slate-200 mb-6 text-glow-silver">The game has ended.</p>
+                <div class="flex flex-col gap-3">
+                    <button id="modalNewGameBtn" class="btn-gold hover:brightness-110 px-6 py-3 rounded-lg font-semibold transition-colors duration-200">
+                        New Game
+                    </button>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+
+
+        // Game state
+        let board = ['', '', '', '', '', '', '', '', ''];
+        let currentPlayer = 'X';
+        let gameActive = true;
+        let gameResult = null;
+        let gameMode = 'ai'; // 'ai' or 'pvp'
+        let player1Name = 'Player 1';
+        let player2Name = 'Player 2';
+
+        // DOM elements
+        const gameBoard = document.getElementById('gameBoard');
+        const gameStatus = document.getElementById('gameStatus');
+        const newGameBtn = document.getElementById('newGameBtn');
+        const gameModal = document.getElementById('gameModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const modalMessage = document.getElementById('modalMessage');
+        const modalIcon = document.getElementById('modalIcon');
+        const modalNewGameBtn = document.getElementById('modalNewGameBtn');
+        
+        // Game mode elements
+        const aiModeBtn = document.getElementById('aiModeBtn');
+        const pvpModeBtn = document.getElementById('pvpModeBtn');
+        const playerNamesSection = document.getElementById('playerNamesSection');
+        const player1NameInput = document.getElementById('player1Name');
+        const player2NameInput = document.getElementById('player2Name');
+        const startPvPGameBtn = document.getElementById('startPvPGameBtn');
+
+
+        // Initialize game
+        function initGame() {
+            board = ['', '', '', '', '', '', '', '', ''];
+            currentPlayer = 'X';
+            gameActive = true;
+            gameResult = null;
+            
+            // Clear winning lines
+            document.querySelectorAll('.winning-line').forEach(line => line.remove());
+            
+            // Hide player names section
+            playerNamesSection.classList.add('hidden');
+            
+            updateGameStatus();
+            renderBoard();
+        }
+
+        // Render game board
+        function renderBoard() {
+            gameBoard.innerHTML = '';
+            
+            for (let i = 0; i < 9; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'game-cell royal-cell rounded-lg flex items-center justify-center text-4xl font-bold cursor-pointer transition-all duration-200';
+                cell.dataset.index = i;
+                cell.textContent = board[i];
+                
+                if (board[i] === 'X') {
+                    cell.classList.add('text-yellow-300', 'text-glow-gold');
+                } else if (board[i] === 'O') {
+                    cell.classList.add('text-slate-200', 'text-glow-silver');
+                }
+                
+                cell.addEventListener('click', handleCellClick);
+                gameBoard.appendChild(cell);
+            }
+        }
+
+        // Handle cell click
+        function handleCellClick(event) {
+            const index = parseInt(event.target.dataset.index);
+            
+            if (board[index] !== '' || !gameActive) {
+                return;
+            }
+            
+            // In AI mode, only allow X (human) to click
+            if (gameMode === 'ai' && currentPlayer !== 'X') {
+                return;
+            }
+            
+            makeMove(index, currentPlayer);
+            
+            // Check if AI should make a move after human's move
+            if (gameActive && gameMode === 'ai' && currentPlayer === 'O') {
+                // AI's turn
+                setTimeout(() => {
+                    const aiMove = getBestMove();
+                    makeMove(aiMove, 'O');
+                }, 500);
+            }
+        }
+
+        // Make a move
+        function makeMove(index, player) {
+            board[index] = player;
+            renderBoard();
+            
+            const result = checkWinner();
+            if (result) {
+                gameActive = false;
+                gameResult = result;
+                showWinningLine(result.winningCombination);
+                showGameResult(result);
+            } else if (board.every(cell => cell !== '')) {
+                gameActive = false;
+                gameResult = { winner: 'draw' };
+                showGameResult(gameResult);
+            } else {
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                updateGameStatus();
+            }
+        }
+
+        // Minimax algorithm for AI
+        function minimax(board, depth, isMaximizing) {
+            const result = checkWinner();
+            
+            if (result && result.winner === 'O') {
+                return 10 - depth;
+            } else if (result && result.winner === 'X') {
+                return depth - 10;
+            } else if (board.every(cell => cell !== '')) {
+                return 0;
+            }
+            
+            if (isMaximizing) {
+                let bestScore = -Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (board[i] === '') {
+                        board[i] = 'O';
+                        const score = minimax(board, depth + 1, false);
+                        board[i] = '';
+                        bestScore = Math.max(score, bestScore);
+                    }
+                }
+                return bestScore;
+            } else {
+                let bestScore = Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (board[i] === '') {
+                        board[i] = 'X';
+                        const score = minimax(board, depth + 1, true);
+                        board[i] = '';
+                        bestScore = Math.min(score, bestScore);
+                    }
+                }
+                return bestScore;
+            }
+        }
+
+        // Get best move for AI
+        function getBestMove() {
+            let bestScore = -Infinity;
+            let bestMove = 0;
+            
+            for (let i = 0; i < 9; i++) {
+                if (board[i] === '') {
+                    board[i] = 'O';
+                    const score = minimax(board, 0, false);
+                    board[i] = '';
+                    
+                    if (score > bestScore) {
+                        bestScore = score;
+                        bestMove = i;
+                    }
+                }
+            }
+            
+            return bestMove;
+        }
+
+        // Check for winner
+        function checkWinner() {
+            const winningCombinations = [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8], // Rows
+                [0, 3, 6], [1, 4, 7], [2, 5, 8], // Columns
+                [0, 4, 8], [2, 4, 6] // Diagonals
+            ];
+            
+            for (let combination of winningCombinations) {
+                const [a, b, c] = combination;
+                if (board[a] && board[a] === board[b] && board[a] === board[c]) {
+                    return {
+                        winner: board[a],
+                        winningCombination: combination
+                    };
+                }
+            }
+            
+            return null;
+        }
+
+        // Show winning line - minimalist animated line from start to end centers
+        function showWinningLine(combination) {
+            const [startIndex, , endIndex] = combination;
+            const cells = document.querySelectorAll('.game-cell');
+            const startCell = cells[startIndex];
+            const endCell = cells[endIndex];
+            if (!startCell || !endCell) return;
+
+            const boardRect = gameBoard.getBoundingClientRect();
+            const startRect = startCell.getBoundingClientRect();
+            const endRect = endCell.getBoundingClientRect();
+
+            // Compute centers relative to board
+            const startX = (startRect.left + startRect.right) / 2 - boardRect.left;
+            const startY = (startRect.top + startRect.bottom) / 2 - boardRect.top;
+            const endX = (endRect.left + endRect.right) / 2 - boardRect.left;
+            const endY = (endRect.top + endRect.bottom) / 2 - boardRect.top;
+
+            const dx = endX - startX;
+            const dy = endY - startY;
+            const length = Math.sqrt(dx * dx + dy * dy);
+            const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+
+            const line = document.createElement('div');
+            line.className = 'winning-line';
+            line.style.left = `${startX}px`;
+            line.style.top = `${startY}px`;
+            line.style.width = `${length}px`;
+            line.style.transform = `rotate(${angle}deg) scaleX(0)`;
+
+            gameBoard.appendChild(line);
+            // Trigger animation to draw the line
+            requestAnimationFrame(() => {
+                line.style.transform = `rotate(${angle}deg) scaleX(1)`;
+            });
+        }
+
+        // Show game result modal
+        function showGameResult(result) {
+            if (result.winner === 'X') {
+                modalIcon.textContent = '🎉';
+                if (gameMode === 'ai') {
+                    modalTitle.textContent = 'Congratulations!';
+                    modalMessage.textContent = 'You won! You beat the AI!';
+                } else {
+                    modalTitle.textContent = `${player1Name} Wins!`;
+                    modalMessage.textContent = `${player1Name} won this round!`;
+                }
+            } else if (result.winner === 'O') {
+                if (gameMode === 'ai') {
+                    modalIcon.textContent = '🤖';
+                    modalTitle.textContent = 'AI Wins!';
+                    modalMessage.textContent = 'The AI won this round. Try again!';
+                } else {
+                    modalIcon.textContent = '🎉';
+                    modalTitle.textContent = `${player2Name} Wins!`;
+                    modalMessage.textContent = `${player2Name} won this round!`;
+                }
+            } else {
+                modalIcon.textContent = '🤝';
+                modalTitle.textContent = "It's a Draw!";
+                modalMessage.textContent = 'Great game! No one won this round.';
+            }
+            
+            gameModal.classList.remove('hidden');
+            gameModal.classList.add('flex');
+        }
+
+        // Update game status
+        function updateGameStatus() {
+            if (currentPlayer === 'X') {
+                if (gameMode === 'ai') {
+                    gameStatus.textContent = 'Your turn (X)';
+                } else {
+                    gameStatus.textContent = `${player1Name}'s turn (X)`;
+                }
+                gameStatus.className = 'text-xl font-semibold text-blue-400 mb-4';
+            } else {
+                if (gameMode === 'ai') {
+                    gameStatus.textContent = "AI's turn (O)";
+                } else {
+                    gameStatus.textContent = `${player2Name}'s turn (O)`;
+                }
+                gameStatus.className = 'text-xl font-semibold text-red-400 mb-4';
+            }
+        }
+
+
+
+        // Game mode functions
+        function startAIMode() {
+            gameMode = 'ai';
+            player1Name = 'You';
+            player2Name = 'AI';
+            initGame();
+        }
+
+        function showPvPSetup() {
+            playerNamesSection.classList.remove('hidden');
+            player1NameInput.value = 'Player 1';
+            player2NameInput.value = 'Player 2';
+        }
+
+        function startPvPMode() {
+            gameMode = 'pvp';
+            player1Name = player1NameInput.value.trim() || 'Player 1';
+            player2Name = player2NameInput.value.trim() || 'Player 2';
+            initGame();
+        }
+
+        // Event listeners
+        newGameBtn.addEventListener('click', () => {
+            gameModal.classList.add('hidden');
+            gameModal.classList.remove('flex');
+            if (gameMode === 'ai') {
+                startAIMode();
+            } else {
+                showPvPSetup();
+            }
+        });
+
+        modalNewGameBtn.addEventListener('click', () => {
+            gameModal.classList.add('hidden');
+            gameModal.classList.remove('flex');
+            if (gameMode === 'ai') {
+                startAIMode();
+            } else {
+                showPvPSetup();
+            }
+        });
+
+        aiModeBtn.addEventListener('click', startAIMode);
+        pvpModeBtn.addEventListener('click', showPvPSetup);
+        startPvPGameBtn.addEventListener('click', startPvPMode);
+
+        // Initialize the game with AI mode by default
+        startAIMode();
+    </script>
+</body>
+</html>
