@@ -37,11 +37,8 @@ assets/
   └─ demo.gif        (optional animation)
 ```
 
-Once added, reference them like this:
 
-![Gameplay](assets/screenshot.png)
 
----
 
 ### Quick Start
 Choose any method below.
